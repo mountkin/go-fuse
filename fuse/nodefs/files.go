@@ -103,7 +103,7 @@ type loopbackFile struct {
 	// reuse the fd number after it is closed. When open races
 	// with another close, they may lead to confusion as which
 	// file gets written in the end.
-	lock sync.Mutex
+	lock sync.RWMutex
 }
 
 func (f *loopbackFile) InnerFile() File {
@@ -111,6 +111,27 @@ func (f *loopbackFile) InnerFile() File {
 }
 
 func (f *loopbackFile) SetInode(n *Inode) {
+}
+
+func (f *loopbackFile) SetFile(osf *os.File) {
+	f.lock.Lock()
+	f.File = osf
+	f.lock.Unlock()
+}
+
+func (f *loopbackFile) SetFileUnsafe(osf *os.File) {
+	f.File = osf
+}
+
+func (f *loopbackFile) OsFile() *os.File {
+	f.lock.RLock()
+	osf := f.File
+	f.lock.RUnlock()
+	return osf
+}
+
+func (f *loopbackFile) GetLock() *sync.RWMutex {
+	return &f.lock
 }
 
 func (f *loopbackFile) String() string {
